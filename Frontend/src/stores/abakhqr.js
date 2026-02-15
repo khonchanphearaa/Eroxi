@@ -8,6 +8,21 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
     const error = ref(null);
 
     /* Generate QRCode */
-    const generateQRCode = async ()
+    const generateQRCode = async (paymentData) =>{
+        try {
+            isLoading.value = true;
+            error.value = null;
+            try {
+                let res = await api.post('/payment/generate-qr', {
+                    
+                });
+
+            } catch (error) {
+                
+            }
+        } catch (error) {
+            
+        }
+    }
     
 });
