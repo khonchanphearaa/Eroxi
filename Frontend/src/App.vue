@@ -1,28 +1,31 @@
 <template>
-  <div class="flex h-screen w-screen bg-[#0b1020] text-white">
-    <div class="w-1/2 p-12 border-r border-gray-800 flex items-center justify-center">
+  <div class="flex h-screen w-screen bg-[#0b1020] text-white overflow-hidden">
+    <!-- Left Side - Keypad -->
+    <div class="w-1/2 p-8 border-r border-gray-800 flex items-center justify-center">
       <div class="w-full max-w-lg">
-        <div class="mb-8">
-          <h1 class="text-3xl font-bold tracking-wider">Enter code on keypad to store</h1>
+        <div class="mb-8 text-center">
+          <h1 class="text-3xl font-bold tracking-wider text-white">Enter Amount</h1>
+          <p class="text-gray-400 text-sm mt-2">Use keypad to enter payment amount</p>
         </div>
 
         <Keypad />
       </div>
     </div>
 
-    <div class="w-1/2 p-12 flex items-center justify-center">
+    <!-- Right Side - QR Display -->
+    <div class="w-1/2 p-8 flex items-center justify-center overflow-y-auto">
       <KhqrDisplay />
     </div>
   </div>
 </template>
 
 <script setup>
-import Keypad from './components/keypad.vue'
+import Keypad from './components/Keypadd.vue'
 import KhqrDisplay from './components/Khqr.vue'
 </script>
 
 <style scoped>
-/* remove number input arrows if any other inputs added later */
+/* Remove number input arrows */
 input::-webkit-outer-spin-button,
 input::-webkit-inner-spin-button {
   -webkit-appearance: none;

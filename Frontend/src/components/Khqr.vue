@@ -1,98 +1,50 @@
 <template>
   <div class="max-w-md mx-auto text-center">
-    <h2 class="text-2xl font-bold text-white mb-4">QRKH Storage</h2>
+    <div class="flex items-center justify-center">
+      <img v-if="store.qrData" :src="store.qrData" class="w-150 h-150 object-contain" alt="Scannable QR Code"
+        style="image-rendering: pixelated; image-rendering: crisp-edges;" />
 
-    <div class="p-0 rounded-2xl border border-gray-700 bg-[#0b0f1a] inline-block shadow-lg overflow-hidden">
-      <!-- red top header with notch -->
-      <div class="khqr-header p-4 text-center text-white font-semibold relative">KHQR
-        <div class="khqr-notch" aria-hidden="true"></div>
+      <div v-else-if="store.isLoading"
+        class="w-56 h-56 flex flex-col items-center justify-center gap-3 text-blue-400 border-2 border-dashed border-gray-300 rounded">
+        <svg class="animate-spin h-8 w-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+          <path class="opacity-75" fill="currentColor"
+            d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z">
+          </path>
+        </svg>
+        <div class="text-sm text-blue-400">Loading...</div>
       </div>
 
-      <div class="p-6">
-        <div class="mb-4">
-          <div class="w-64 bg-white rounded-lg p-4 inline-block shadow-inner relative">
-            <!-- merchant name and amount inside the white card -->
-            <div class="text-left text-black">
-              <div class="text-sm font-medium">{{ store.merchantName }}</div>
-              <div class="text-2xl font-bold mt-1">{{ store.amountKHR }} <span class="text-sm font-medium">KHR</span></div>
-            </div>
-
-            <div class="my-3 border-t border-dashed border-gray-300"></div>
-
-            <div class="flex items-center justify-center relative">
-              <img v-if="store.qrData" :src="store.qrData" class="w-48 h-48 object-contain" />
-              <div v-else class="w-48 h-48 flex items-center justify-center text-gray-400">QR</div>
-
-              <!-- center badge over QR area -->
-              <div class="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-red-500 border-4 border-white flex items-center justify-center">
-                <div class="text-white font-bold text-sm">e</div>
-              </div>
-            </div>
+      <div v-else
+        class="w-56 h-56 flex items-center justify-center text-gray-400 border-2 border-dashed border-gray-300 rounded">
+        <div class="text-center">
+          <PictureInPicture :size="100" />
+          <div class="text-xs text-gray-500">
+            <h2 class="text-lg">Scan QR Code</h2>
           </div>
         </div>
-
-        <div class="mt-6 text-sm text-gray-400 text-left">Stored Code</div>
-        <div class="mt-2 inline-block bg-[#0b1720] px-4 py-2 rounded-md text-2xl font-bold text-teal-300 border border-gray-800">
-          {{ latestCode || '-' }}
-        </div>
-
-        
-       
       </div>
+    </div>
+
+    <!-- Error Message -->
+    <div v-if="store.error" class="mt-4 bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+      <p class="text-red-400 text-sm text-center">{{ store.error }}</p>
     </div>
   </div>
 </template>
 
 <script setup>
-import { computed } from 'vue'
 import { useAbakhqrStore } from '@/stores/abakhqr'
-
+import { PictureInPicture } from 'lucide-vue-next';
 const store = useAbakhqrStore()
 
-const latestCode = computed(() => (store.storedCodes.length ? store.storedCodes[0] : null))
-
-const select = (code) => {
-  store.selectCode(code)
-}
-
-const remove = (code) => {
-  store.removeCode(code)
-}
-
-const clearAll = () => {
-  store.clearRecent()
-}
 </script>
 
 <style scoped>
-/* minimal component styles — final polish via Tailwind in App */
-.khqr-header{
-  background: #e11d2b; /* red */
-  border-top-left-radius: 14px;
-  border-top-right-radius: 14px;
-  padding: 12px 20px;
-  font-size: 14px;
-  position: relative;
-}
-.khqr-header .khqr-notch{
-  position: absolute;
-  width: 40px;
-  height: 26px;
-  right: -10px;
-  bottom: -9px; /* pull down to overlap the white card */
-  background: #e11d2b; /* same as inner card */
-  transform: rotate(25deg);
-  border-bottom-right-radius: 6px; /* rounded outer corner */
-  box-shadow: 0 1px 0 rgba(0,0,0,0.06);
-  z-index: 3;
-}
-.khqr-header {
-  overflow: visible;
-}
-
-/* ensure white card sits under the notch visually */
-.w-64.bg-white {
-  position: relative;
-  z-index: 1;
+/* Ensure QR code is crisp and scannable */
+img[alt="Scannable QR Code"] {
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  image-rendering: pixelated;
 }
 </style>
