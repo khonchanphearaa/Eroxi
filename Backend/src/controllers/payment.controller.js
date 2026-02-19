@@ -1,24 +1,43 @@
+import QRCode from "qrcode";
+import logger from "../utils/logger.js";
+
+
+/**
+ * @ABApayway
+ * TTD: 2026-02-15
+ */
 import abaServer from "../servers/abaServer.js";
 import abaConfig from "../config/aba.config.js";
 import acledaServer from "../servers/acledaServer.js";
 import acledaConfig from "../config/acleda.config.js";
 import { generateRequestTime, generateQRHash, generateCheckTransactionHash, generateTransactionId } from "../utils/hashGenerator.js";
-import logger from "../utils/logger.js";
 
-class PaymentController{
 
-    /* Generate QRCode */
-    async genearteQRCode(req, res){
+/**
+ * @Bakong KHQR
+ * TTD: 2026-02-19
+ */
+import bakongConfig from "../config/bakong.config.js";
+import { BakongKHQR, IndividualInfo, khqrData } from "bakong-khqr";
+import Transaction from "../models/bakongTransaction.js";
+
+/* Active bakong pollers: transactionId to intervalId */
+const pollers = new Map();
+
+class PaymentController {
+
+    /* ABA Generate QRCode */
+    async genearteQRCode(req, res) {
         try {
             const {
                 amount,
-                currency = 'KHR',
+                currency = "KHR",
                 first_name,
                 last_name,
                 email,
                 phone,
-                purchase_type = 'purchase',
-                payment_option = 'abapay_khqr',
+                purchase_type = "purchase",
+                payment_option = "abapay_khqr",
                 items,
                 callback_url,
                 return_deeplink,
@@ -26,167 +45,352 @@ class PaymentController{
                 return_params,
                 payout,
                 lifetime,
-                qr_image_template
+                qr_image_template,
             } = req.body;
-            
+
             const req_time = generateRequestTime();
             const tran_id = generateTransactionId();
-            // choose provider based on payment_option
-            const provider = payment_option === 'acleda_khqr' ? { server: acledaServer, config: acledaConfig } : { server: abaServer, config: abaConfig };
 
+            /* Prepare request payload for ABA api */
             const payload = {
                 req_time,
                 merchant_id: provider.config.merchantId,
                 tran_id,
                 amount,
-                items: items ?? '',
-                first_name: first_name ?? '',
-                last_name: last_name ?? '',
-                email: email ?? '',
-                phone: phone ?? '',
+                items: items ?? "",
+                first_name: first_name ?? "",
+                last_name: last_name ?? "",
+                email: email ?? "",
+                phone: phone ?? "",
                 purchase_type,
                 payment_option,
-                callback_url: callback_url ?? '',
-                return_deeplink: return_deeplink ?? '',
+                callback_url: callback_url ?? "",
+                return_deeplink: return_deeplink ?? "",
                 currency,
-                custom_fields: custom_fields ?? '',
-                return_params: return_params ?? '',
-                payout: payout ?? '',
-                lifetime: lifetime ?? provider.config.defaultLifetime,
-                qr_image_template: qr_image_template ?? provider.config.defaultTemplate
+                custom_fields: custom_fields ?? "",
+                return_params: return_params ?? "",
+                payout: payout ?? "",
+                lifetime: lifetime ?? abaConfig.defaultLifetime,
+                qr_image_template: qr_image_template ?? abaConfig.defaultTemplate,
             };
 
-            // if provider apiKey missing, allow a development mock so local dev works
-            let providerResponse;
-            if (!provider.config.apiKey) {
-                if (process.env.NODE_ENV === 'development') {
-                    // create a mock successful response
-                    providerResponse = {
-                        status: { code: '0', message: 'mock success' },
-                        qrString: `DEMO_QR_${tran_id}`,
-                        qrImage: null,
-                        abapay_deeplink: null,
-                        app_store: null,
-                        play_store: null
-                    };
-                    logger.info('Using development mock provider response for', payment_option);
-                } else {
-                    throw new Error(`Missing API key for provider (${payment_option}). Please set the provider API key in environment variables.`);
-                }
-            } else {
-                payload.hash = generateQRHash(payload, provider.config.apiKey);
-                providerResponse = await provider.server.generateQRCode(payload);
-            }
+            payload.hash = generateQRHash(payload);
+            const abaResponse = await abaServer.generateQRCode(payload);
 
-            /* Check if provider response indicates success (status.code === '0') */
-            if (providerResponse.status?.code === '0') {
-                logger.success('QRCode generated success: ', providerResponse);
+            /* Check if when ABA response is success 0: success */
+            if (abaResponse.status?.code === "0") {
+                logger.success("QRCode generated success:", abaResponse);
                 return res.status(200).json({
                     success: true,
-                    merchant_id: provider.config.merchantId,
+                    merchant_id: abaConfig.merchantId,
                     tran_id,
                     amount,
                     currency,
                     payment_option,
-                    qrString: providerResponse.qrString,
-                    qrImage: providerResponse.qrImage,
-                    abapay_deeplink: providerResponse.abapay_deeplink,
-                    app_store: providerResponse.app_store,
-                    play_store: providerResponse.play_store,
-                    status: providerResponse.status
+                    qrString: abaResponse.qrString,
+                    qrImage: abaResponse.qrImage,
+                    abapay_deeplink: abaResponse.abapay_deeplink,
+                    app_store: abaResponse.app_store,
+                    play_store: abaResponse.play_store,
+                    status: abaResponse.status,
                 });
             }
+            throw new Error("Failed to generate QRCode: " + abaResponse.status?.message);
 
-            throw new Error('Failed to generate QRCode: ' + providerResponse.status?.message);
         } catch (error) {
-            logger.error('Error generating QRCode:', error);
-            return res.status(500).json({
-                success: false,
-                message: error.message,
-                error: error.message,
-                ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
-            });
+            logger.error("Error generating QRCode:", error);
+            return res.status(500).json({ success: false, message: error.message });
         }
     }
 
-    /* Check transaction status */
-    async checkTransaction(req, res){
+    /* ABA Check transaction status */
+    async checkTransaction(req, res) {
         try {
-            const {tran_id} = req.body;
+            const { tran_id } = req.body;
             const req_time = generateRequestTime();
-            const provider = req.body.payment_option === 'acleda_khqr' ? { server: acledaServer, config: acledaConfig } : { server: abaServer, config: abaConfig };
-            let providerResponse;
-            if (!provider.config.apiKey) {
-                if (process.env.NODE_ENV === 'development') {
-                    providerResponse = { status: { code: '0', message: 'mock check success' }, tran_id, paid: false };
-                    logger.info('Using development mock checkTransaction for', req.body.payment_option);
-                } else {
-                    throw new Error(`Missing API key for provider. Please set the provider API key in environment variables.`);
-                }
-            } else {
-                const hash = generateCheckTransactionHash(req_time, provider.config.merchantId, tran_id, provider.config.apiKey)
-                const payload={
-                    req_time,
-                    merchant_id: provider.config.merchantId,
-                    tran_id,
-                    hash,
-                }
-                providerResponse = await provider.server.checkTransaction(payload);
-            }
-            logger.info('Provider Check Transaction Response:', tran_id);
-            return res.status(200).json({
-                success: true,
-                data : providerResponse
-            })
+            const hash = generateCheckTransactionHash(req_time, abaConfig.merchantId, tran_id);
+
+            const payload = { req_time, merchant_id: abaConfig.merchantId, tran_id, hash };
+            const abaResponse = await abaServer.checkTransaction(payload);
+
+            logger.info("ABA Check Transaction Response:", tran_id);
+            return res.status(200).json({ success: true, data: abaResponse });
+
         } catch (error) {
-            logger.error('Error checking transaction:', error);
-            return res.status(500).json({
-                success: false,
-                message: error.message,
-                error: error.message,
-                ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
-            });
+            logger.error("Error checking transaction:", error);
+            return res.status(500).json({ success: false, message: error.message });
         }
     }
 
-    /* Close transaction status*/
-    async closeTransaction(req, res){
+   
+    /* ABA Close transaction */
+    async closeTransaction(req, res) {
         try {
-            const {tran_id} = req.body;
+            const { tran_id } = req.body;
             const req_time = generateRequestTime();
-            const provider = req.body.payment_option === 'acleda_khqr' ? { server: acledaServer, config: acledaConfig } : { server: abaServer, config: abaConfig };
-            let providerResponse;
-            if (!provider.config.apiKey) {
-                if (process.env.NODE_ENV === 'development') {
-                    providerResponse = { status: { code: '0', message: 'mock close success' }, tran_id, closed: true };
-                    logger.info('Using development mock closeTransaction for', req.body.payment_option);
-                } else {
-                    throw new Error(`Missing API key for provider. Please set the provider API key in environment variables.`);
-                }
-            } else {
-                const hash = generateCheckTransactionHash(req_time, provider.config.merchantId, tran_id, provider.config.apiKey)
-                const payload={
-                    req_time,
-                    merchant_id: provider.config.merchantId,
-                    tran_id,
-                    hash,
-                }
-                providerResponse = await provider.server.closeTransaction(payload);
+            const hash = generateCheckTransactionHash(req_time, abaConfig.merchantId, tran_id);
+
+            const payload = { req_time, merchant_id: abaConfig.merchantId, tran_id, hash };
+            const abaResponse = await abaServer.closeTransaction(payload);
+
+            logger.success("ABA Close transaction response:", abaResponse);
+            return res.status(200).json({ success: true, data: abaResponse });
+
+        } catch (error) {
+            logger.error("Error closing transaction:", error);
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    /* Bakong Generate KHQR */
+    async generateBakongQR(req, res) {
+        try {
+            const {
+                amount,
+                currency = "KHR",
+                merchant_name = bakongConfig.bakong.merchantName,
+                description,
+            } = req.body;
+
+            // Check .env is loaded correctly
+            if (!bakongConfig.bakong.accountId) {
+                return res.status(500).json({ success: false, message: "BAKONG_ACCOUNT_ID is not set in .env" });
             }
-            logger.success('Provider Close transaction response:', providerResponse);
+
+            if (!amount || isNaN(amount) || Number(amount) <= 0) {
+                return res.status(400).json({ success: false, message: "Valid amount is required" });
+            }
+
+            const currency_code = currency.toUpperCase() === "USD"
+                ? khqrData.currency.usd   // 840 USD
+                : khqrData.currency.khr;  // 116 KHR
+
+            /* Build IndividualInfo using the official bakong-khqr SDK */
+            const individualInfo = new IndividualInfo(
+                bakongConfig.bakong.accountId,     
+                merchant_name,             
+                bakongConfig.bakong.merchantCity, 
+                {
+                    currency: currency_code,
+                    amount: Number(amount),
+                    expirationTimestamp: Date.now() + (bakongConfig.bakong.qrExpirationSeconds * 1000),
+                    purposeOfTransaction: description ?? "",
+                }
+            );
+
+            /* SDK generates correct EMVCo QR — handles all tags, CRC, timestamp */
+            const khqr = new BakongKHQR();
+            const response = khqr.generateIndividual(individualInfo);
+
+            if (response.status.code !== 0) {
+                logger.error("Bakong SDK error:", response.status);
+                return res.status(500).json({ success: false, message: response.status.message });
+            }
+
+            const qrString = response.data.qr;
+            const md5Hash = response.data.md5;
+
+            /* Render QR image as base64 PNG */
+            const qrImage = await QRCode.toDataURL(qrString, {
+                errorCorrectionLevel: "M",
+                type: "image/png",
+                width: 300,
+                margin: 2,
+            });
+
+            const expiresAt = new Date(Date.now() + bakongConfig.bakong.qrExpirationSeconds * 1000);
+
+            const transaction = await Transaction.create({
+                md5Hash,
+                qrString,
+                amount: Number(amount),
+                currency: currency.toUpperCase(),
+                description: description ?? "",
+                status: "PENDING",
+                expiresAt,
+            });
+
+            logger.success("Bakong QR generated:", { transactionId: transaction._id, md5Hash });
+
             return res.status(200).json({
                 success: true,
-                data: providerResponse
-            })
-        } catch (error) {
-            logger.error('Error closing transaction:', error);
-            return res.status(500).json({
-                success: false,
-                message: error.message,
-                error: error.message,
-                ...(process.env.NODE_ENV === 'development' && { stack: error.stack })
+                transactionId: transaction._id,
+                md5Hash,
+                qrString,
+                qrImage,
+                expiresAt: expiresAt.toISOString(),
+                currency: currency.toUpperCase(),
+                amount: Number(amount),
             });
+
+        } catch (error) {
+            logger.error("Error generating Bakong QR:", error);
+            return res.status(500).json({ success: false, message: error.message });
         }
+    }
+
+    /* Bakong start polling */
+    async startBakongPolling(req, res) {
+        try {
+            const { transactionId } = req.body;
+            if (!transactionId) {
+                return res.status(400).json({ success: false, message: "transactionId is required" });
+            }
+
+            const transaction = await Transaction.findById(transactionId);
+            if (!transaction) {
+                return res.status(404).json({ success: false, message: "Transaction not found" });
+            }
+            if (transaction.status !== "PENDING") {
+                return res.json({ success: true, message: "Already settled", status: transaction.status });
+            }
+
+            /* Stop any existing poller for this transaction */
+            if (pollers.has(transactionId)) {
+                clearInterval(pollers.get(transactionId));
+            }
+
+            const intervalId = setInterval(async () => {
+                try {
+                    const tx = await Transaction.findById(transactionId);
+                    if (!tx || tx.status !== "PENDING") {
+                        clearInterval(intervalId);
+                        pollers.delete(transactionId);
+                        return;
+                    }
+
+                    if (new Date() > tx.expiresAt) {
+                        await Transaction.findByIdAndUpdate(transactionId, { status: "TIMEOUT" });
+                        clearInterval(intervalId);
+                        pollers.delete(transactionId);
+                        logger.info("Bakong QR expired:", transactionId);
+                        return;
+                    }
+
+                    const result = await this._checkBakongPayment(tx.md5Hash);
+
+                    if (result.paid) {
+                        await Transaction.findByIdAndUpdate(transactionId, {
+                            status: "SUCCESS",
+                            paymentData: result.data,
+                        });
+                        clearInterval(intervalId);
+                        pollers.delete(transactionId);
+                        logger.success("Bakong payment SUCCESS:", transactionId);
+                    } else if (result.failed) {
+                        await Transaction.findByIdAndUpdate(transactionId, { status: "FAILED" });
+                        clearInterval(intervalId);
+                        pollers.delete(transactionId);
+                    }
+
+                } catch (err) {
+                    logger.error("Bakong poll tick error will retry:", err.message);
+                }
+            }, bakongConfig.bakong.pollIntervalMs);
+
+            pollers.set(transactionId, intervalId);
+            logger.info("Bakong polling started:", transactionId);
+
+            return res.status(200).json({ success: true, message: "Polling started", transactionId });
+
+        } catch (error) {
+            logger.error("Error starting Bakong polling:", error);
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+
+    /* Bakong Get payment status */
+    async getBakongStatus(req, res) {
+        try {
+            const { transactionId } = req.body;
+            if (!transactionId) {
+                return res.status(400).json({ success: false, message: "transactionId is required" });
+            }
+
+            const transaction = await Transaction.findById(transactionId);
+            if (!transaction) {
+                return res.status(404).json({ success: false, message: "Transaction not found" });
+            }
+
+            return res.status(200).json({
+                success: true,
+                transactionId: transaction._id,
+                status: transaction.status,  /* For status bakong: PENDING, SUCCESS, FAILED, TIMEOUT */
+                amount: transaction.amount,
+                currency: transaction.currency,
+                paymentData: transaction.paymentData ?? null,
+                expiresAt: transaction.expiresAt,
+            });
+
+        } catch (error) {
+            logger.error("Error getting Bakong status:", error);
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    /* Bakong Check md5 */
+    async checkBakongByMD5(req, res) {
+        try {
+            const { md5 } = req.body;
+            if (!md5) return res.status(400).json({ success: false, message: "md5 is required" });
+
+            const result = await this._checkBakongPayment(md5);
+            return res.status(200).json({ success: true, ...result });
+
+        } catch (error) {
+            logger.error("Error checking Bakong MD5:", error);
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+    /* qrString verify KHQR */
+    async verifyBakongQR(req, res) {
+        try {
+            const { qrString } = req.body;
+            if (!qrString) return res.status(400).json({ success: false, message: "qrString is required" });
+
+            const result = BakongKHQR.verify(qrString);
+
+            return res.status(200).json({
+                success: true,
+                isValid: result.isValid,
+                message: result.isValid ? "QR is valid" : "QR is invalid",
+            });
+
+        } catch (error) {
+            return res.status(500).json({ success: false, message: error.message });
+        }
+    }
+
+
+    /* Check payment by md5 */
+    async _checkBakongPayment(md5Hash) {
+        const url = `${bakongConfig.bakong.apiUrl.replace(/\/$/, "")}/v1/check_transaction_by_md5`;
+
+        const response = await fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${bakongConfig.bakong.token}`,
+            },
+            body: JSON.stringify({ md5: md5Hash }),
+        });
+
+        const data = await response.json();
+        logger.info("Bakong API:", { md5Hash, responseCode: data.responseCode, message: data.responseMessage });
+
+        /* if responseCode 0 = paid */
+        if (data.responseCode === 0 && data.data) {
+            return { paid: true, pending: false, failed: false, data: data.data };
+        }
+
+        const msg = (data.responseMessage || "").toLowerCase();
+        if (msg.includes("not found") || response.status === 404) {
+            return { paid: false, pending: true, failed: false, data: null };
+        }
+
+        return { paid: false, pending: false, failed: false, data: null };
     }
 }
 
