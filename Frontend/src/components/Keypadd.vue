@@ -20,30 +20,30 @@
 
     <div class="grid grid-cols-3 gap-5">
       <!-- Numbers 1-9 -->
-      <button v-for="n in [1, 2, 3, 4, 5, 6, 7, 8, 9]" :key="n" @click="press(n)" :disabled="store.isLoading"
+      <button v-for="n in [1, 2, 3, 4, 5, 6, 7, 8, 9]" :key="n" @click="press(n)" :disabled="isLoading"
         class="h-24 bg-[#1f2a33] rounded-lg shadow-2xl flex items-center justify-center text-white font-bold text-2xl hover:scale-[1.01] active:scale-[0.98] transition-transform disabled:opacity-50 disabled:cursor-not-allowed">
         {{ n }}
       </button>
 
       <!-- Bottom Row -->
-      <button @click="clearAll" :disabled="store.isLoading"
+      <button @click="clearAll" :disabled="isLoading"
         class="h-24 bg-[#3b2026] rounded-lg flex items-center justify-center text-red-400 font-bold hover:bg-[#4a2830] active:bg-[#5a3038] transition-colors disabled:opacity-50">
         Clear
       </button>
 
-      <button @click="press(0)" :disabled="store.isLoading"
+      <button @click="press(0)" :disabled="isLoading"
         class="h-24 bg-[#1f2a33] rounded-lg flex items-center justify-center text-white font-bold text-2xl hover:scale-[1.01] active:scale-[0.98] transition-transform disabled:opacity-50">
         0
       </button>
 
-      <button @click="enter" :disabled="store.isLoading || !store.input"
+      <button @click="enter" :disabled="isLoading || !store.input"
         class="h-24 bg-[#0f3b2d] rounded-lg flex items-center justify-center text-green-300 font-bold hover:bg-[#1a4d3a] active:bg-[#255547] transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-        {{ store.isLoading ? '...' : 'Enter' }}
+        {{ isLoading ? '...' : 'Enter' }}
       </button>
     </div>
 
     <!-- Loading Indicator -->
-    <div v-if="store.isLoading" class="mt-4 flex items-center justify-center gap-2 text-blue-400">
+    <div v-if="isLoading" class="mt-4 flex items-center justify-center gap-2 text-blue-400">
       <span class="text-sm">Generating QR Code...</span>
       <svg class="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -58,8 +58,11 @@
 <script setup>
 import { computed } from 'vue'
 import { useAbakhqrStore } from '@/stores/abakhqr'
+import { useBakongkhqrStore } from '@/stores/bakongkhqr'
 
 const store = useAbakhqrStore()
+const bakongStore = useBakongkhqrStore()
+const isLoading = computed(() => store.selectedProvider === 'bakong_khqr' ? bakongStore.isLoading : store.isLoading)
 
 const press = (d) => store.appendDigit(d)
 const clearAll = () => store.clear()
