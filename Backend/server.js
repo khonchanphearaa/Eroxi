@@ -1,12 +1,14 @@
 import express from 'express';
 import cors from 'cors';
-import 'dotenv/config.js' // Load environment variables from .env file
+import 'dotenv/config.js' 
+import connectDB from './src/loaders/mongodb.js';
 
 import paymentRoutes from './src/routes/payment.routes.js';
 import { errorHandler } from './src/middlewares/errorHandler.js';
 import logger from './src/utils/logger.js'; 
 
 const app = express();
+connectDB();
 const PORT = process.env.PORT ?? 5050;
 
 // Middleware
