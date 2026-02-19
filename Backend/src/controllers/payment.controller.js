@@ -8,6 +8,8 @@ import logger from "../utils/logger.js";
  */
 import abaServer from "../servers/abaServer.js";
 import abaConfig from "../config/aba.config.js";
+import acledaServer from "../servers/acledaServer.js";
+import acledaConfig from "../config/acleda.config.js";
 import { generateRequestTime, generateQRHash, generateCheckTransactionHash, generateTransactionId } from "../utils/hashGenerator.js";
 
 
@@ -52,7 +54,7 @@ class PaymentController {
             /* Prepare request payload for ABA api */
             const payload = {
                 req_time,
-                merchant_id: abaConfig.merchantId,
+                merchant_id: provider.config.merchantId,
                 tran_id,
                 amount,
                 items: items ?? "",
