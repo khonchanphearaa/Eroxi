@@ -11,6 +11,7 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
     const isLoading = ref(false)
     const error = ref(null)
     const token = ref(null)
+    const selectedProvider = ref('abapay_khqr')
 
     const merchantName = computed(() => {
         return currentTransaction.value?.merchant_id
@@ -83,7 +84,8 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
                 first_name: 'new',
                 last_name: 'guest',
                 phone: '0123456789',
-                email: 'example@example.com'
+                email: 'example@example.com',
+                payment_option: selectedProvider.value
             })
 
             console.log('API Response:', response.data)
@@ -143,7 +145,8 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
         try {
             console.log('🔍 Checking transaction:', tran_id)
             const response = await api.post('/payment/check-transaction', {
-                tran_id
+                tran_id,
+                payment_option: selectedProvider.value
             })
             console.log('Transaction Status:', response.data)
             return response.data
@@ -160,7 +163,8 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
             console.log('Closing transaction:', tran_id)
 
             const response = await api.post('/payment/close-transaction', {
-                tran_id
+                tran_id,
+                payment_option: selectedProvider.value
             })
             console.log('Transaction Closed:', response.data)
             return response.data
@@ -169,6 +173,10 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
             console.error('Close Transaction Error:', errorMessage)
             throw err
         }
+    }
+
+    const setProvider = (provider) => {
+        selectedProvider.value = provider
     }
 
     /*  When a user clicks on a recent code, it populates the input 
@@ -229,6 +237,8 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
         generateQRCode,
         checkTransactionStatus,
         closeTransaction,
+        setProvider,
+        selectedProvider,
 
         // Recent Codes Actions
         selectCode,

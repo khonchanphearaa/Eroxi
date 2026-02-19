@@ -1,10 +1,8 @@
 import CryptoJs from 'crypto-js';
-import abaConfig from '../config/aba.config.js';
 
 /* Generate a time-stamp for format: YYYYMMDDHHmmss (UTC) */
 export const generateRequestTime = () =>{
     const now = new Date();
-    
     const year = now.getUTCFullYear();
     const month = String(now.getUTCMonth() + 1).padStart(2, '0');
     const day = String(now.getUTCDate()).padStart(2, '0');
@@ -18,7 +16,9 @@ export const generateRequestTime = () =>{
 /* Generate a hash value for a given string */
 const normalizeValue = (value) => (value === null || value === undefined ? '' : String(value));
 
-export const generateQRHash = (payload) => {
+export const generateQRHash = (payload, apiKey) => {
+    if (!apiKey) throw new Error('API key is required to generate QR hash');
+
     const stringBeforeHash =
         normalizeValue(payload.req_time) +
         normalizeValue(payload.merchant_id) +
@@ -40,19 +40,19 @@ export const generateQRHash = (payload) => {
         normalizeValue(payload.lifetime) +
         normalizeValue(payload.qr_image_template);
 
-    /* hashString unique 256-bit, output WordArray and Cryptp.enc(..) Convert Base64 */
     return CryptoJs.enc.Base64.stringify(
-        CryptoJs.HmacSHA512(stringBeforeHash, abaConfig.apiKey)
-    )
+        CryptoJs.HmacSHA512(stringBeforeHash, apiKey)
+    );
 }
 
-/* Generate a hash check transcation */
-export const generateCheckTransactionHash = (req_time, merchant_id, tran_id) =>{
+/* Generate a hash check transaction */
+export const generateCheckTransactionHash = (req_time, merchant_id, tran_id, apiKey) =>{
+     if (!apiKey) throw new Error('API key is required to generate check-transaction hash');
      const stringBeforHash = req_time + merchant_id + tran_id;
      return CryptoJs.enc.Base64.stringify(
-        CryptoJs.HmacSHA512(stringBeforHash, abaConfig.apiKey)
-     )
+        CryptoJs.HmacSHA512(stringBeforHash, apiKey)
+     );
 }
 
-/* Generate tran_id = 732dhfew.. */
+/* Generate tran_id = TX + timestamp */
 export const generateTransactionId = () => `TX${Date.now()}`;

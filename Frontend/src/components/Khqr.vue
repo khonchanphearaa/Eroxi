@@ -75,6 +75,14 @@ const store = useAbakhqrStore()
 
   const selectBank = (id) => {
     selectedBank.value = id
+    // map bank id to payment_option used by backend
+    const map = {
+      wing: 'wing_khqr',
+      acleda: 'acleda_khqr',
+      bakong: 'bakong_khqr'
+    }
+    const provider = map[id] || 'abapay_khqr'
+    store.setProvider(provider)
   }
 
 </script>
