@@ -2,6 +2,7 @@ import { ref, computed } from 'vue'
 import { defineStore } from 'pinia'
 import QRCode from 'qrcode'
 import api from '@/api/api'
+import { useBakongkhqrStore } from '@/stores/bakongkhqr'
 
 export const useAbakhqrStore = defineStore('abakhqr', () => {
     const input = ref('')
@@ -55,7 +56,12 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
         console.log(` Input: ${inputValue} → Amount: ${amount} KHR`)
 
         try {
-            await generateQRCode(amount)
+            if (selectedProvider.value === 'bakong_khqr') {
+                const bakongStore = useBakongkhqrStore()
+                await bakongStore.generateBakongQRCode(amount)
+            } else {
+                await generateQRCode(amount)
+            }
             if (!storedCodes.value.includes(input.value)) {
                 storedCodes.value.unshift(input.value)
                 if (storedCodes.value.length > 3) {
@@ -78,7 +84,7 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
         try {
             console.log('Generating QR for amount:', amount, 'KHR')
 
-            const response = await api.post('/payment/generate-qr', {
+            const response = await api.post('/payment/generateQRCode', {
                 amount: amount,
                 currency: 'KHR',
                 first_name: 'new',
@@ -144,7 +150,7 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
     const checkTransactionStatus = async (tran_id) => {
         try {
             console.log('🔍 Checking transaction:', tran_id)
-            const response = await api.post('/payment/check-transaction', {
+            const response = await api.post('/payment/checkTransaction', {
                 tran_id,
                 payment_option: selectedProvider.value
             })
@@ -162,7 +168,7 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
         try {
             console.log('Closing transaction:', tran_id)
 
-            const response = await api.post('/payment/close-transaction', {
+            const response = await api.post('/payment/closeTransaction', {
                 tran_id,
                 payment_option: selectedProvider.value
             })
@@ -198,7 +204,6 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
 
     // Reset QR data and current transaction but keep recent codes
     const resetQRData = () => {
-        input.value = ''
         qrData.value = null
         currentTransaction.value = null
         error.value = null
