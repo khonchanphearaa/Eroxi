@@ -1,6 +1,7 @@
 /* Validation QRCode when it generated request */
 export const validateGenerateQRCode = (req, res, next)=>{
     const {amount, currency} = req.body;
+    
     if(!amount || typeof amount !== 'number' || amount <= 0 ){
         return res.status(400).json({
             success: false,
@@ -16,13 +17,6 @@ export const validateGenerateQRCode = (req, res, next)=>{
             message: 'Invalid currency must be KHR or USD only.'
         })
     }
-    next();
-};
-    
-    /* Validation check transaction */
-    export const validatCheckTransaction =(req, res, next)=>{
-        const {tran_id} = req.body;
-        if(!tran_id){
     
     if(currency === 'USD' && amount < 0.01){
         return res.status(400).json({
@@ -30,10 +24,20 @@ export const validateGenerateQRCode = (req, res, next)=>{
             message: 'Invalid amount. Minimum for USD is 0.01.'
         })
     }
-            return res.status(400).json({
-                success: false,
-                message: 'Transaction ID is required.'
-            })
-        }
-        next();
+    
+    next();
+};
+
+/* Validation check transaction */
+export const validatCheckTransaction = (req, res, next) => {
+    const {tran_id} = req.body;
+    
+    if(!tran_id){
+        return res.status(400).json({
+            success: false,
+            message: 'Transaction ID is required.'
+        })
     }
+    
+    next();
+}
