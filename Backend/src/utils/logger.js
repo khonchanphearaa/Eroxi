@@ -13,6 +13,9 @@ export const logger ={
     },
     response: (status, data= null)=>{
         console.log(`Response: ${status}`, data ?? '');  
+    },
+    warn: (msg, data = null) => {
+        console.warn(`Warning: ${msg}`, data ?? '');
     }
 }
 
