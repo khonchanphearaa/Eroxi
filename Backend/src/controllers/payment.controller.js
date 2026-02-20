@@ -26,9 +26,22 @@ const pollers = new Map();
 
 class PaymentController {
 
+    validateAbaConfig() {
+        if (!abaConfig.baseUrl) {
+            throw new Error('PAYWAY_BASE_URL is missing. Use https://checkout.payway.com.kh for production or sandbox URL for sandbox credentials.');
+        }
+        if (!abaConfig.merchantId) {
+            throw new Error('ABA_MERCHANT_ID is missing.');
+        }
+        if (!abaConfig.apiKey) {
+            throw new Error('ABA_API_KEY is missing.');
+        }
+    }
+
     /* ABA Generate QRCode */
     async genearteQRCode(req, res) {
         try {
+            this.validateAbaConfig();
             const {
                 amount,
                 currency = "KHR",
@@ -99,13 +112,26 @@ class PaymentController {
 
         } catch (error) {
             logger.error("Error generating QRCode:", error);
-            return res.status(500).json({ success: false, message: error.message });
+            const upstreamCode = error.apiResponse?.status?.code;
+            const upstreamMessage = error.apiResponse?.status?.message;
+            const isMerchantConfigError = upstreamCode === '96';
+
+            const message = isMerchantConfigError
+                ? 'ABA merchant credential mismatch. Verify ABA_MERCHANT_ID and ABA_API_KEY belong to the same environment as PAYWAY_BASE_URL (production vs sandbox).'
+                : (upstreamMessage || error.message);
+
+            return res.status(error.httpStatus || 500).json({
+                success: false,
+                message,
+                aba_status: error.apiResponse?.status ?? null,
+            });
         }
     }
 
     /* ABA Check transaction status */
     async checkTransaction(req, res) {
         try {
+            this.validateAbaConfig();
             const { tran_id } = req.body;
             const req_time = generateRequestTime();
             const hash = generateCheckTransactionHash(req_time, abaConfig.merchantId, tran_id, abaConfig.apiKey);
@@ -118,7 +144,11 @@ class PaymentController {
 
         } catch (error) {
             logger.error("Error checking transaction:", error);
-            return res.status(500).json({ success: false, message: error.message });
+            return res.status(error.httpStatus || 500).json({
+                success: false,
+                message: error.apiResponse?.status?.message || error.message,
+                aba_status: error.apiResponse?.status ?? null,
+            });
         }
     }
 
@@ -126,6 +156,7 @@ class PaymentController {
     /* ABA Close transaction */
     async closeTransaction(req, res) {
         try {
+            this.validateAbaConfig();
             const { tran_id } = req.body;
             const req_time = generateRequestTime();
             const hash = generateCheckTransactionHash(req_time, abaConfig.merchantId, tran_id, abaConfig.apiKey);
@@ -138,7 +169,11 @@ class PaymentController {
 
         } catch (error) {
             logger.error("Error closing transaction:", error);
-            return res.status(500).json({ success: false, message: error.message });
+            return res.status(error.httpStatus || 500).json({
+                success: false,
+                message: error.apiResponse?.status?.message || error.message,
+                aba_status: error.apiResponse?.status ?? null,
+            });
         }
     }
 
