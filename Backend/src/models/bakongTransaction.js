@@ -11,7 +11,7 @@ const bakongTransactionSchema = new mongoose.Schema(
         expiresAt: { type: Date, required: true },
         paymentData: { type: mongoose.Schema.Types.Mixed, default: null },
     },
-    { timestamps: true }
+    { timestamps: true }    
 );
 
 export default mongoose.model('BakongTransaction', bakongTransactionSchema);
