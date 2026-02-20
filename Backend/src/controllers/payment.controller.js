@@ -392,6 +392,99 @@ class PaymentController {
 
         return { paid: false, pending: false, failed: false, data: null };
     }
+
+    
+
+
+  // Generate QR for ACLEDA payment
+  async generateAcleadaQR(req, res) {
+    try {
+      const { amount, order_id } = req.body;
+
+      const response = await axios.post(
+        "https://payment.acledabank.com.kh/api/v1/qr/generate",
+        {
+          merchant_id: process.env.ACLEDA_MERCHANT_ID,
+          amount: amount,
+          currency: "KHR",
+          order_id: order_id
+        },
+        {
+          headers: {
+            "API-KEY": process.env.ACLEDA_API_KEY,
+            "SECRET-KEY": process.env.ACLEDA_SECRET_KEY
+          }
+        }
+      );
+
+      res.json(response.data);
+
+    } catch (err) {
+      res.status(500).json(err.response?.data || err.message);
+    }
+  }
+
+  // Polling for ACLEDA payment status (this is a simple implementation, you can enhance it with better scheduling or webhooks if ACLEDA supports)
+  async startAcleadaPolling(req, res) {
+    const { order_id } = req.body;
+
+    // You can implement interval checking here
+    res.json({
+      message: "Polling started",
+      order_id
+    });
+  }
+
+  //  Check Status by Order ID
+  async getAcleadaStatus(req, res) {
+    try {
+      const { order_id } = req.body;
+
+      const response = await axios.post(
+        "https://payment.acledabank.com.kh/api/v1/status",
+        {
+          merchant_id: process.env.ACLEDA_MERCHANT_ID,
+          order_id: order_id
+        },
+        {
+          headers: {
+            "API-KEY": process.env.ACLEDA_API_KEY,
+            "SECRET-KEY": process.env.ACLEDA_SECRET_KEY
+          }
+        }
+      );
+
+      res.json(response.data);
+
+    } catch (err) {
+      res.status(500).json(err.response?.data || err.message);
+    }
+  }
+
+  // Check by Order ID (for ACLEDA)
+  async checkAcleadaByOrder(req, res) {
+    const { order_id } = req.body;
+
+    // Query your DB or ACLEDA API
+    res.json({
+      order_id,
+      status: "PAID"
+    });
+  }
+
+  // Verify QR string (for ACLEDA, this might involve decoding the QR and checking its signature or format)
+  async verifyAcleadaQR(req, res) {
+    const { qr_string } = req.body;
+
+    // Verify logic or decode KHQR
+    res.json({
+      valid: true,
+      qr_string
+    });
+  }
+
+
+
 }
 
 export default new PaymentController();

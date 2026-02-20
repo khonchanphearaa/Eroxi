@@ -22,4 +22,36 @@ router.post("/bakong-status",          PaymentController.getBakongStatus.bind(Pa
 router.post("/bakong-check-by-md5",    PaymentController.checkBakongByMD5.bind(PaymentController));
 router.post("/bakong-verify-qr",       PaymentController.verifyBakongQR.bind(PaymentController));
 
+/**
+ * @ACLEDA
+ * Routes for handling ACLEDA payment, QR generation, and status checking
+ */
+
+router.post(
+  "/generateAcleadaQR",
+  PaymentController.generateAcleadaQR.bind(PaymentController)
+);
+
+router.post(
+  "/acleda-polling",
+  PaymentController.startAcleadaPolling.bind(PaymentController)
+);
+
+router.post(
+  "/acleda-status",
+  PaymentController.getAcleadaStatus.bind(PaymentController)
+);
+
+router.post(
+  "/acleda-check-by-order",
+  PaymentController.checkAcleadaByOrder.bind(PaymentController)
+);
+
+router.post(
+  "/acleda-verify-qr",
+  PaymentController.verifyAcleadaQR.bind(PaymentController)
+);
+
+
+
 export default router;

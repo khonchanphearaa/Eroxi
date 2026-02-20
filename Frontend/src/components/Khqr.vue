@@ -5,7 +5,7 @@
         <div class="relative bg-red-600 h-16 flex items-center justify-center">
           <div class="text-white text-2xl font-semibold tracking-[0.2em]">KHQR</div>
           <div class="absolute -bottom-px right-0 w-0 h-0"
-            style="border-left: 42px solid transparent; border-top: 42px solid rgb(243 244 246);"></div>
+            style="border-left: 42px solid transparent; border-top: 42px solid rgb(240, 10, 10); top: 63px;"></div>
         </div>
 
         <div class="px-8 pt-6 pb-5">
@@ -86,6 +86,7 @@ import { PictureInPicture } from 'lucide-vue-next';
   const wingIcon = new URL('@/assets/images/wing.png', import.meta.url).href
   const acledaIcon = new URL('@/assets/images/acleda.png', import.meta.url).href
   const bakongIcon = new URL('@/assets/images/bakong.png', import.meta.url).href
+  const abaIcon = new URL('@/assets/images/aba.png', import.meta.url).href
 const store = useAbakhqrStore()
 const bakongStore = useBakongkhqrStore()
 
@@ -105,6 +106,7 @@ const bakongAmount = computed(() => {
   const banks = [
     { id: 'wing', title: 'Wing Bank', icon: wingIcon },
     { id: 'acleda', title: 'ACLEDA', icon: acledaIcon },
+    { id: 'aba', title: 'ABA Payway', icon: abaIcon },
     { id: 'bakong', title: 'Bakong (KHQR)', icon: bakongIcon }
   ]
 
@@ -115,6 +117,7 @@ const bakongAmount = computed(() => {
     const map = {
       wing: 'wing_khqr',
       acleda: 'acleda_khqr',
+      aba: 'abapay_khqr',
       bakong: 'bakong_khqr'
     }
 
