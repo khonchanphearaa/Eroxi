@@ -1,40 +1,17 @@
+import dotenv from 'dotenv';
 
-
-const axios = require("axios");
+dotenv.config();
 
 const ACLEDA_CONFIG = {
-  merchant_id: "YOUR_MERCHANT_ID",
-  api_key: "YOUR_API_KEY",
-  secret_key: "YOUR_SECRET_KEY",
-  endpoint: "https://payment.acledabank.com.kh/api/v1/payments"
+    merchantId: process.env.ACLEDA_MERCHANT_ID,
+    apiKey: process.env.ACLEDA_API_KEY,
+    secretKey: process.env.ACLEDA_SECRET_KEY,
+    baseUrl: process.env.ACLEDA_BASE_URL || 'https://payment.acledabank.com.kh',
+    endpoint: {
+        generateQRCode: '/api/v1/qr/generate',
+        checkTransaction: '/api/v1/status',
+        closeTransaction: '/api/v1/close',
+    },
 };
 
-// Create payment
-async function createPayment() {
-  try {
-    const response = await axios.post(
-      ACLEDA_CONFIG.endpoint,
-      {
-        merchant_id: ACLEDA_CONFIG.merchant_id,
-        amount: 50000,
-        currency: "KHR",
-        description: "Order Payment",
-        return_url: "https://yourwebsite.com/success",
-        cancel_url: "https://yourwebsite.com/cancel"
-      },
-      {
-        headers: {
-          "API-KEY": ACLEDA_CONFIG.api_key,
-          "SECRET-KEY": ACLEDA_CONFIG.secret_key,
-          "Content-Type": "application/json"
-        }
-      }
-    );
-
-    console.log(response.data);
-  } catch (error) {
-    console.error(error.response.data);
-  }
-}
-
-createPayment();
+export default ACLEDA_CONFIG;
