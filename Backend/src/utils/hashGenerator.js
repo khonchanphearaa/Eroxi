@@ -40,6 +40,7 @@ export const generateQRHash = (payload, apiKey) => {
         normalizeValue(payload.lifetime) +
         normalizeValue(payload.qr_image_template);
 
+    /* hashString unique 256-bit, output WordArray and Cryptp.enc(..) Convert Base64 */
     return CryptoJs.enc.Base64.stringify(
         CryptoJs.HmacSHA512(stringBeforeHash, apiKey)
     );
