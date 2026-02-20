@@ -54,7 +54,7 @@ class PaymentController {
             /* Prepare request payload for ABA api */
             const payload = {
                 req_time,
-                merchant_id: provider.config.merchantId,
+                merchant_id: abaConfig.merchantId,
                 tran_id,
                 amount,
                 items: items ?? "",
@@ -74,7 +74,7 @@ class PaymentController {
                 qr_image_template: qr_image_template ?? abaConfig.defaultTemplate,
             };
 
-            payload.hash = generateQRHash(payload);
+            payload.hash = generateQRHash(payload, abaConfig.apiKey);
             const abaResponse = await abaServer.generateQRCode(payload);
 
             /* Check if when ABA response is success 0: success */
@@ -108,7 +108,7 @@ class PaymentController {
         try {
             const { tran_id } = req.body;
             const req_time = generateRequestTime();
-            const hash = generateCheckTransactionHash(req_time, abaConfig.merchantId, tran_id);
+            const hash = generateCheckTransactionHash(req_time, abaConfig.merchantId, tran_id, abaConfig.apiKey);
 
             const payload = { req_time, merchant_id: abaConfig.merchantId, tran_id, hash };
             const abaResponse = await abaServer.checkTransaction(payload);
@@ -128,7 +128,7 @@ class PaymentController {
         try {
             const { tran_id } = req.body;
             const req_time = generateRequestTime();
-            const hash = generateCheckTransactionHash(req_time, abaConfig.merchantId, tran_id);
+            const hash = generateCheckTransactionHash(req_time, abaConfig.merchantId, tran_id, abaConfig.apiKey);
 
             const payload = { req_time, merchant_id: abaConfig.merchantId, tran_id, hash };
             const abaResponse = await abaServer.closeTransaction(payload);
