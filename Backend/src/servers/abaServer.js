@@ -22,7 +22,14 @@ class ABAServer{
             const responseText = await res.text();
             if(!res.ok){
                 logger.error('ABA API error response:', responseText);
-                throw new Error(`HTTP error! status: ${res.status}${responseText ? ` - ${responseText}` : ''}`);
+                const error = new Error(`HTTP error! status: ${res.status}${responseText ? ` - ${responseText}` : ''}`);
+                error.httpStatus = res.status;
+                try {
+                    error.apiResponse = responseText ? JSON.parse(responseText) : {};
+                } catch {
+                    error.apiResponse = { raw: responseText };
+                }
+                throw error;
             }
             let data = {};
             try {
