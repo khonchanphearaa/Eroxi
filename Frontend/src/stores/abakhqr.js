@@ -14,6 +14,23 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
     const token = ref(null)
     const selectedProvider = ref('abapay_khqr')
 
+    const extractApiError = (err, fallbackMessage) => {
+        const data = err?.response?.data || {}
+        const abaStatus = data?.aba_status
+
+        const baseMessage =
+            data?.message ||
+            data?.error ||
+            err?.message ||
+            fallbackMessage
+
+        if (abaStatus?.code && abaStatus?.message) {
+            return `${baseMessage} (ABA ${abaStatus.code}: ${abaStatus.message})`
+        }
+
+        return baseMessage
+    }
+
     const merchantName = computed(() => {
         return currentTransaction.value?.merchant_id
     })
@@ -100,7 +117,7 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
             const qrString = payload.qrString || payload.qr_string || null
             const qrImage = payload.qrImage || payload.qr_image || null
             if (payload.success === false) {
-                throw new Error(payload.error || 'Failed to generate QR code')
+                throw new Error(payload.message || payload.error || 'Failed to generate QR code')
             }
 
             if (!qrString && !qrImage) {
@@ -136,7 +153,7 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
             console.log('QR String:', currentTransaction.value.qr_string)
             return payload
         } catch (err) {
-            const errorMessage = err.response?.data?.error || err.message || 'Failed to generate QR code'
+            const errorMessage = extractApiError(err, 'Failed to generate QR code')
             error.value = errorMessage
             console.error('Generate QR Error:', errorMessage)
             throw err
@@ -157,7 +174,8 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
             console.log('Transaction Status:', response.data)
             return response.data
         } catch (err) {
-            const errorMessage = err.response?.data?.error || err.message || 'Failed to check transaction'
+            const errorMessage = extractApiError(err, 'Failed to check transaction')
+            error.value = errorMessage
             console.error('Check Transaction Error:', errorMessage)
             throw err
         }
@@ -175,7 +193,8 @@ export const useAbakhqrStore = defineStore('abakhqr', () => {
             console.log('Transaction Closed:', response.data)
             return response.data
         } catch (err) {
-            const errorMessage = err.response?.data?.error || err.message || 'Failed to close transaction'
+            const errorMessage = extractApiError(err, 'Failed to close transaction')
+            error.value = errorMessage
             console.error('Close Transaction Error:', errorMessage)
             throw err
         }
